@@ -1,88 +1,100 @@
-// 蛇类
-class Snake {
-    constructor({ width = 20, height = 20, direction = 'right'  } = {}){
-          // 存储蛇
-          this.elements = [];
- 
-          this.width = width;
-          this.height = height;
-          this.direction = direction;
-          // 蛇的身体 初始三节
-          this.body = [
-              {x: 3, y: 2, color: 'red'},
-              {x: 2, y: 2, color: 'blue'},
-              {x: 1, y: 2, color: 'blue'},
-          ];
-    }
- 
-    render(map){
-        this.remove(); // 删除之前创建的蛇
-        for(let i = 0, len = this.body.length; i <  len; i++ ){
-            let object = this.body[i];
- 
-            let div = document.createElement('div');
-            map.appendChild(div);
-            this.elements.push(div);
- 
-             // 设置样式
-             div.style.position = 'absolute';
-             div.style.width = this.width + 'px';
-             div.style.height = this.height + 'px';
-             div.style.left = object.x * this.width + 'px';
-             div.style.top = object.y * this.height + 'px';
-             div.style.backgroundColor = object.color;
-        }
-    }
- 
-    move(food, map){
-        // 控制蛇的移动 (当前蛇节 移动到上一个蛇节)
-        for(let i = this.body.length - 1; i > 0; i--){
-            this.body[i].x = this.body[i - 1].x; 
-            this.body[i].y = this.body[i - 1].y; 
-        }
-        // 蛇头
-        let head = this.body[0];
- 
-        // 蛇头的行进方向
-        switch(this.direction) {
-            case 'right':
-                head.x += 1;
-                break;
-            case 'left':
-                head.x -= 1;
-                break;
-            case 'top':
-                head.y -= 1;
-                break;
-            case 'bottom':
-                head.y += 1;
-                break;
-        }
- 
-        // 蛇吃食物
-        // 判断蛇头的位置是否与食物的位置重合
-        let  headX = head.x * this.width;
-        let  headY = head.y * this.height;
- 
-        if(headX === food.x && headY === food.y){
-            let last = this.body[this.body.length -1 ];
-            this.body.push({
-                x: last.x,
-                y: last.y,
-                color: last.color
-            });
-            // 重新生成一个食物
-            food.render(map);
-        }
-    }
-    remove() {
-        for (let i = this.elements.length - 1; i >= 0; i--) {
-            // 删除div
-            this.elements[i].parentNode.removeChild(this.elements[i]);
-            // 删除数组中的元素
-            this.elements.splice(i, 1);
-        }
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const boxSize = 20;  // 每个方块的大小
+let snake = [{ x: 9 * boxSize, y: 10 * boxSize }];  // 初始化蛇的位置
+let direction = "RIGHT";  // 初始方向
+let food = generateFood();
+let score = 0;
+
+// 监听键盘输入
+document.addEventListener("keydown", changeDirection);
+
+// 更新游戏状态
+function gameLoop() {
+    if (isGameOver()) {
+        alert("Game Over! Your score: " + score);
+        document.location.reload();
+    } else {
+        clearCanvas();
+        drawFood();
+        moveSnake();
+        drawSnake();
+        setTimeout(gameLoop, 100);
     }
 }
- 
-export default Snake;
+
+// 清空画布
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// 绘制蛇
+function drawSnake() {
+    snake.forEach(segment => {
+        ctx.fillStyle = "green";
+        ctx.fillRect(segment.x, segment.y, boxSize, boxSize);
+        ctx.strokeStyle = "darkgreen";
+        ctx.strokeRect(segment.x, segment.y, boxSize, boxSize);
+    });
+}
+
+// 移动蛇
+function moveSnake() {
+    const head = { x: snake[0].x, y: snake[0].y };
+
+    // 更新头部位置
+    if (direction === "LEFT") head.x -= boxSize;
+    if (direction === "UP") head.y -= boxSize;
+    if (direction === "RIGHT") head.x += boxSize;
+    if (direction === "DOWN") head.y += boxSize;
+
+    // 检查蛇是否吃到食物
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        food = generateFood();
+    } else {
+        snake.pop();  // 移除尾部
+    }
+
+    // 添加新的头部
+    snake.unshift(head);
+}
+
+// 生成随机食物
+function generateFood() {
+    const foodX = Math.floor(Math.random() * (canvas.width / boxSize)) * boxSize;
+    const foodY = Math.floor(Math.random() * (canvas.height / boxSize)) * boxSize;
+    return { x: foodX, y: foodY };
+}
+
+// 绘制食物
+function drawFood() {
+    ctx.fillStyle = "red";
+    ctx.fillRect(food.x, food.y, boxSize, boxSize);
+}
+
+// 改变方向
+function changeDirection(event) {
+    const key = event.key;
+    if (key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+    else if (key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+    else if (key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+    else if (key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+}
+
+// 判断游戏结束
+function isGameOver() {
+    const head = snake[0];
+    // 撞墙
+    if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) return true;
+
+    // 撞自己
+    for (let i = 1; i < snake.length; i++) {
+        if (head.x === snake[i].x && head.y === snake[i].y) return true;
+    }
+    return false;
+}
+
+// 启动游戏循环
+gameLoop();
